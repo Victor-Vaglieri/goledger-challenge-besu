@@ -1,119 +1,93 @@
 # GoLedger Challenge - Besu Edition
 
-This repository contains my solution for the GoLedger Challenge. The project consists of a Go application that interacts with a Hyperledger Besu blockchain network and a PostgreSQL database to manage and synchronize a smart contract's state.
+In this challenge you will interact with a Hyperledger Besu node. The goal is to create a simple application that interacts with a Besu node to transact on a smart contract, read the value of a contract variable, and sync that value to an external database.
 
-## Technologies Used
+We recommend a UNIX-like machine (Linux/macOS).
 
-+ Operating System: Ubuntu 22.04 LTS (via WSL 2)
-+ [Docker](https://www.docker.com/) & Docker Compose
-+ [Go](https://golang.org/dl/) 1.22.1
-+ [Foundry](https://book.getfoundry.sh/getting-started/installation) (Smart Contract deployment and testing)
-+ Java JDK 17+ (Required to run the local Besu binary)
-+ [jq](https://jqlang.org/download/) (JSON processing)
-+ [wget](https://www.gnu.org/software/wget/) (Network downloader)
-+ Blockchain: Hyperledger Besu (4-node private network)
-+ Database: PostgreSQL 14+ (via Docker)
+## Prerequisites
+
+- [Docker](https://www.docker.com/)
+- [Go](https://golang.org/dl/)
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) (`forge`, `cast`)
+- [Java JDK](https://besu.hyperledger.org/private-networks/get-started/install/binary-distribution) — required to run the local Besu binary
+  - macOS: Java 21+ (`brew install openjdk@21`)
+  - Linux/Unix: Java 17+
+- [jq](https://jqlang.org/download/)
+- [wget](https://www.gnu.org/software/wget/) (macOS fallback: `curl`)
+- Fork the repository: https://github.com/goledgerdev/goledger-challenge-besu
+  - Fork it, do **NOT** clone it, since you will need to send us your forked repository
+  - If you cannot fork it, create a private repository and give access to `samuelvenzi`
 
 ## Repository structure
 
 ```
 .
-├── app/                    # Go Application Source Code
-│   ├── blockchain/         # Besu integration and Contract binding
-│   │   └── besu.go         
-│   ├── database/           # PostgreSQL connection and Schema setup
-│   │   └── db.go           
-│   ├── handlers/           # HTTP API Handlers (REST)
-│   │   └── api.go          
-│   ├── .env                # Environment variables (Contract/DB/Network)
-│   ├── .gitignore          # Git exclusion rules
-│   └── main.go             # Application entry point
-├── besu/                   # Besu network configuration scripts
-├── SimpleStorage/          # Foundry project (Solidity contract & Deploy)
-├── Makefile                # Automation targets
-├── README.md
-└── statement.md	
+├── app/                # Your solution goes here
+├── besu/               # Scripts and config to run the local Besu network
+├── SimpleStorage/      # Foundry project: contract source, tests, and deploy script
+├── Makefile            # Convenience targets
+└── README.md
 ```
-
-## Architecture & Implementation Notes
-
-- **Separation of Concerns:** The code was refactored into packages (`blockchain`, `database`, `handlers`) to ensure maintainability.
-- **Data Integrity:** The `/sync` endpoint uses an `UPSERT` logic (`ON CONFLICT`) in PostgreSQL to maintain a single source of truth for the contract's latest state.
-- **Security:** Sensitive data like Database credentials and Blockchain Private Keys are managed via environment variables (`.env`) and protected by `.gitignore`.
-- **Connectivity:** Fixed WSL 2 DNS resolution issues during development to allow the Go environment to fetch external dependencies.
-
-
-### Communication Flow
-
-
-### Execution Proof
-
-The image below demonstrates the workflow: reading the current state, setting a new value on the blockchain, verifying the desynchronization, running the sync process, and confirming the updated state in the database.
-
-(COLOCAR A IMAGEM AQUI)
 
 ## Set up the environment
 
-1. Start the Blockchain and Deploy Contract
-The project uses a Makefile to automate the Besu network startup and contract deployment:
+The Makefile provides a single command to start the 4-node Besu network **and** deploy the `SimpleStorage` contract to it:
 
 ```bash
 make devnet-deploy
 ```
-2. Configure the Application
-Navigate to the app/ folder and create a .env file based on the contract address and the private key found in SimpleStorage/.env.example.
 
+The deployed contract address is printed to stdout at the end. You will need it in your application.
+
+Other available targets:
+
+| Target | Description |
+|---|---|
+| `make devnet` | Start the Besu network only |
+| `make deploy` | Deploy the contract to a running network |
+| `make stop-devnet` | Stop and clean up the network |
+
+You can check the logs of a running node with:
 
 ```bash
-cd app
-# Update .env with CONTRACT_ADDRESS and PRIVATE_KEY
+docker logs -f besu.node-1
 ```
 
-3. Run the Application
-Install dependencies and start the Go server:
+The contract ABI is generated by Foundry at `SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json` after running `forge build` (or `make deploy`, which triggers a build automatically).
 
-```bash
-go mod tidy
-go run main.go
-```
-
-The server will be available at ```http://localhost:8080.```
-
-The contract ABI is generated by Foundry at SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json after running forge build (or make deploy, which triggers a build automatically).
-
-## The challenge
+# The challenge
 
 Your task is to create a simple application that interacts with a Besu blockchain network and an SQL database. The application must be written in Go and expose its functionality as either a REST API or a gRPC service.
 
-### Requirements
+## Requirements
 
 1. **Programming Language:**
-   - ✅ The application must be written in Go.
+   - The application must be written in Go.
 
 2. **API Type:**
-   - ✅ Choose either __**REST**__ or gRPC for the service interface.
+   - Choose either REST or gRPC for the service interface.
    - If implementing gRPC, enable reflection so we can test it using tools like Postman.
 
 3. **Database Integration:**
-   - ✅ Use an SQL database (e.g., __**PostgreSQL**__ or MySQL).
-   - ✅ Store the value of the smart contract variable in the database.
+   - Use an SQL database (e.g., PostgreSQL or MySQL).
+   - Store the value of the smart contract variable in the database.
 
 4. **Endpoints:**
    - The application should provide the following functionality via appropriately named endpoints or methods:
 
-     1. ✅ **SET:**
-        - ✅ Set a new value for the smart contract variable.
-        - ✅ The application should send this value to the deployed smart contract on the Besu network.
+     1. **SET:**
+        - Set a new value for the smart contract variable.
+        - The application should send this value to the deployed smart contract on the Besu network.
 
-     2. ✅ **GET:**
-        - ✅ Retrieve the current value of the smart contract variable from the blockchain.
+     2. **GET:**
+        - Retrieve the current value of the smart contract variable from the blockchain.
 
-     3. ✅ **SYNC:**
-        - ✅ Synchronize the value of the smart contract variable from the blockchain to the SQL database.
+     3. **SYNC:**
+        - Synchronize the value of the smart contract variable from the blockchain to the SQL database.
 
-     4. ✅**CHECK:**
-        - ✅ Compare the value stored in the database with the current value of the smart contract variable.
-        - ✅ Return `true` if they are the same, otherwise return `false`.
+     4. **CHECK:**
+        - Compare the value stored in the database with the current value of the smart contract variable.
+        - Return `true` if they are the same, otherwise return `false`.
 
    - **Endpoint Naming:**
      - You may name the endpoints/methods as you see fit, provided their functionality meets the requirements outlined above.
@@ -122,7 +96,7 @@ Your task is to create a simple application that interacts with a Besu blockchai
      - Ensure the application handles blockchain interactions (reads/writes) correctly.
      - Add appropriate error handling for all interactions (blockchain, database, and API).
 
-### Deliverables
+## Deliverables
 
 1. **Source Code:**
    - The source code of the application should be hosted on a public GitHub repository forked from this one.
