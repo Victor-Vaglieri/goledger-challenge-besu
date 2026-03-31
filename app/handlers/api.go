@@ -51,7 +51,6 @@ func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ERRO - requisição", http.StatusBadRequest)
 		return
 	}
-	
 	// TODO - verificar ???
 	pkey := os.Getenv("PRIVATE_KEY")
 	if len(pkey) > 2 && pkey[:2] == "0x" {
@@ -88,4 +87,30 @@ func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "\nTransação no bloco: %v\nHash: %s\n", receipt.BlockNumber, tx.Hash().Hex())
+}
+
+func (api *API) SyncHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "ERRO - Método", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var output []interface{}
+	err := api.Contract.Call(&bind.CallOpts{Context: r.Context()}, &output, "get")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ERRO - leitura blockchain: %v", err), http.StatusInternalServerError)
+		return
+	}
+	value := output[0].(*big.Int).String()
+
+	query := `INSERT INTO contract_state (id, contract_value)
+		VALUES (1, $1)
+		ON CONFLICT (id) DO UPDATE SET contract_value = EXCLUDED.contract_value;`
+	_, err = api.DB.Exec(query, value)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ERRO - salvar db: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "\nValor %s salvo (db).\n", value)
 }
