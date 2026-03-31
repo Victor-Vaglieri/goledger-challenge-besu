@@ -55,22 +55,23 @@ The image below demonstrates the workflow: reading the current state, setting a 
 
 ## Set up the environment
 
-1. Start the Blockchain and Deploy Contract
+### 1. Start the Blockchain and Deploy Contract
 The project uses a Makefile to automate the Besu network startup and contract deployment:
 
 ```bash
 make devnet-deploy
 ```
-2. Configure the Application
-Navigate to the app/ folder and create a .env file based on the contract address and the private key found in SimpleStorage/.env.example.
-
+### 2. Configure the Application
+Navigate to the `app/` folder, copy the environment template, and fill in the required variables.
+The `CONTRACT_ADDRESS` is outputted at the end of the `make devnet-deploy` step. The `PRIVATE_KEY` is available in `SimpleStorage/.env.example`.
 
 ```bash
 cd app
-# Update .env with CONTRACT_ADDRESS and PRIVATE_KEY
+cp .env.example .env
+# Edit .env and insert CONTRACT_ADDRESS and PRIVATE_KEY
 ```
 
-3. Run the Application
+### 3. Run the Application
 Install dependencies and start the Go server:
 
 ```bash
