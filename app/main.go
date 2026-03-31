@@ -1,45 +1,43 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-	_ "github.com/lib/pq"
+	"desafio/blockchain"
+	"desafio/database"
+	"desafio/handlers"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// PostgreSQL
-	connStr := "host=localhost port=5432 user=admin password=admin dbname=goledger sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("FALHA - banco: %v", err)
-	}
-	defer db.Close()
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS contract_state (
-			id SERIAL PRIMARY KEY,
-			contract_value VARCHAR(255) NOT NULL
-		);
-	`)
-	if err != nil {
-		log.Fatalf("FALHA - tabela: %v", err)
+		log.Fatal("FALHA - .env")
 	}
 
-	// Besu
-	client, err := ethclient.Dial("http://localhost:8545")
-	if err != nil {
-		log.Fatalf("FALHA - Besu: %v", err)
-	}
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
+
+	db := database.InitDB(connStr)
+	defer db.Close()
+
+	client, contract := blockchain.InitContract(os.Getenv("BESU_NODE_URL"), os.Getenv("CONTRACT_ADDRESS"))
 	defer client.Close()
 
-	// Definição das rotas da API REST
-	http.HandleFunc("GET /get", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Endpoint GET.")
-	})
+	api := &handlers.API{
+		DB:       db,
+		Contract: contract,
+		Client:   client,
+	}
 
-	fmt.Println("Servidor HTTP: 8080.")
+	http.HandleFunc("/get", api.GetHandler)
+	http.HandleFunc("/set", api.SetHandler)
+
+	fmt.Println("HTTP WORKING - 8080.")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
