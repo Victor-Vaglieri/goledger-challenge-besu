@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("/get", api.GetHandler)
 	http.HandleFunc("/set", api.SetHandler)
 	http.HandleFunc("/sync", api.SyncHandler)
+	http.HandleFunc("/check", api.CheckHandler)
 
 	fmt.Println("HTTP WORKING - 8080.")
 	log.Fatal(http.ListenAndServe(":8080", nil))

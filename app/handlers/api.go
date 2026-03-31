@@ -24,6 +24,12 @@ type SetRequest struct {
 	Value uint64 `json:"value"`
 }
 
+type CheckResponse struct {
+	BlockchainValue string `json:"blockchain_value"`
+	DatabaseValue   string `json:"database_value"`
+	Synced          bool   `json:"synced"`
+}
+
 func (api *API) GetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "ERRO - método", http.StatusMethodNotAllowed)
@@ -37,7 +43,7 @@ func (api *API) GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "\nValor no contrato: %v\n", output[0])
+	fmt.Fprintf(w, "\nValor no contrato: %v\n\n", output[0])
 }
 
 func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +92,7 @@ func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "\nTransação no bloco: %v\nHash: %s\n", receipt.BlockNumber, tx.Hash().Hex())
+	fmt.Fprintf(w, "\nTransação no bloco: %v\nHash: %s\n\n", receipt.BlockNumber, tx.Hash().Hex())
 }
 
 func (api *API) SyncHandler(w http.ResponseWriter, r *http.Request) {
@@ -113,4 +119,38 @@ func (api *API) SyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "\nValor %s salvo (db).\n", value)
+}
+func (api *API) CheckHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "ERRO - Método", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var output []interface{}
+	err := api.Contract.Call(&bind.CallOpts{Context: r.Context()}, &output, "get")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ERRO - leitura blockchain: %v", err), http.StatusInternalServerError)
+		return
+	}
+	bcValue := output[0].(*big.Int).String()
+
+	var dbValue string
+	err = api.DB.QueryRow("SELECT contract_value FROM contract_state WHERE id = 1").Scan(&dbValue)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			dbValue = "!Sync"
+		} else {
+			http.Error(w, "ERRO - leitura db", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	response := CheckResponse{
+		BlockchainValue: bcValue,
+		DatabaseValue:   dbValue,
+		Synced:          bcValue == dbValue,
+	}
+
+	w.Header().Set("Content-Type: application/json", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
