@@ -45,12 +45,13 @@ This repository contains my solution for the GoLedger Challenge. The project con
 
 ### Communication Flow
 
+<img width="1001" height="576" alt="Communication Flow" src="https://github.com/user-attachments/assets/ba1464ee-f1ea-4440-8c4c-6341d0b387a5" />
 
 ### Execution Proof
 
 The image below demonstrates the workflow: reading the current state, setting a new value on the blockchain, verifying the desynchronization, running the sync process, and confirming the updated state in the database.
 
-(COLOCAR A IMAGEM AQUI)
+<img width="634" height="296" alt="Execution Proof" src="https://github.com/user-attachments/assets/f6b62ae7-f8db-4130-8209-01e1cd799ab2" />
 
 ## Set up the environment
 
