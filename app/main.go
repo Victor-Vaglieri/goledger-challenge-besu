@@ -14,9 +14,8 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("FALHA - .env")
+	if err := godotenv.Load(); err != nil {
+		log.Println("FALHA - arquivo .env não encontrado. ")
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -40,6 +39,6 @@ func main() {
 	http.HandleFunc("/sync", api.SyncHandler)
 	http.HandleFunc("/check", api.CheckHandler)
 
-	fmt.Println("HTTP WORKING - 8080.")
+	fmt.Println("HTTP WORKING - 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

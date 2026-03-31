@@ -43,7 +43,11 @@ func (api *API) GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "\nValor no contrato: %v\n\n", output[0])
+	if len(output) > 0 {
+		fmt.Fprintf(w, "\nValor no contrato: %v\n\n", output[0])
+	} else {
+		http.Error(w, "ERRO - retorno vazio do contrato", http.StatusInternalServerError)
+	}
 }
 
 func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +61,7 @@ func (api *API) SetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ERRO - requisição", http.StatusBadRequest)
 		return
 	}
-	// TODO - verificar ???
+
 	pkey := os.Getenv("PRIVATE_KEY")
 	if len(pkey) > 2 && pkey[:2] == "0x" {
 		pkey = pkey[2:]
@@ -107,7 +111,11 @@ func (api *API) SyncHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("ERRO - leitura blockchain: %v", err), http.StatusInternalServerError)
 		return
 	}
-	value := output[0].(*big.Int).String()
+
+	value := "0"
+	if len(output) > 0 {
+		value = output[0].(*big.Int).String()
+	}
 
 	query := `INSERT INTO contract_state (id, contract_value)
 		VALUES (1, $1)
@@ -120,6 +128,7 @@ func (api *API) SyncHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "\nValor %s salvo (db).\n", value)
 }
+
 func (api *API) CheckHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "ERRO - Método", http.StatusMethodNotAllowed)
@@ -132,7 +141,11 @@ func (api *API) CheckHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("ERRO - leitura blockchain: %v", err), http.StatusInternalServerError)
 		return
 	}
-	bcValue := output[0].(*big.Int).String()
+	
+	bcValue := "0"
+	if len(output) > 0 {
+		bcValue = output[0].(*big.Int).String()
+	}
 
 	var dbValue string
 	err = api.DB.QueryRow("SELECT contract_value FROM contract_state WHERE id = 1").Scan(&dbValue)
@@ -151,6 +164,7 @@ func (api *API) CheckHandler(w http.ResponseWriter, r *http.Request) {
 		Synced:          bcValue == dbValue,
 	}
 
-	w.Header().Set("Content-Type: application/json", "application/json")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
